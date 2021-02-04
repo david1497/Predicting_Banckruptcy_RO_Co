@@ -1,17 +1,30 @@
+library(xml2)
 library(rvest)
 library(tidyverse)
 library(Gmedian)
 library(tibble)
+library(usethis)
 library(devtools)
 library(stringi)
 
 ListOfUrls = c()
 
 # saving all pages with lists of companies in one list
-for (i in 1:16487) {
+# there are 16 840 pages with tables containing links to the companies data, 
+# each table contains 50 links to a company, therefore, we
+# must receive about 16 840 * 50 = 842 000 links
+# At this point, we are saving all links to the pages with tables, next step will be to copy the
+# links to each company.
+z = 16840
+for (i in 1:z) {
   a = paste("https://www.listafirme.ro/pagini/p",i,".htm")
   a <- stri_replace_all_charclass(a, "\\p{WHITE_SPACE}", "")
   ListOfUrls = c(ListOfUrls, a)
+  percent = i/z * 100
+  print(paste0(percent, "%"))
+  if(percent == 100) {
+    print(paste0("=========================", "Sir, all links were copied :D "))
+  }
 }
 
 ListOfCompanyUrls = c()
@@ -21,31 +34,38 @@ ListOfCompanyUrls = c()
 # Because the site can detect if there is an unusual traffic, you have to change the beginning of the range
 # It takes few minutes until it stops, but, in the mean time it scraps the links to more than 50 000 companies
 # You just have to get back on the website and click that it is a normal traffic, later get back to your working env
-# and set the start of the range from the last page processed
-for (i in 14604:16487) {
+# and set the start of the range from the last page processed(i-1)
+# Now we will start processing 
+for (i in 16607:length(ListOfUrls)) {
   urlOfTheList = ListOfUrls[1]
   theLinks <- urlOfTheList %>%
     read_html() %>%
     html_nodes(".clickable-row a") %>%
     html_attr("href")
-  for (i in 1:length(theLinks)){
-    theLinks[i] = paste("https://www.listafirme.ro",theLinks[i])
-    theLinks[i] = stri_replace_all_charclass(theLinks[i], "\\p{WHITE_SPACE}", "")
+  for (y in 1:length(theLinks)){
+    theLinks[y] = paste("https://www.listafirme.ro",theLinks[y])
+    theLinks[y] = stri_replace_all_charclass(theLinks[y], "\\p{WHITE_SPACE}", "")
+    print(paste0(y, " links from the ", i, " page were copied"))
   }
   ListOfCompanyUrls = c(ListOfCompanyUrls, theLinks)
+  print(i)
 }
 
-# creating a function that will extract he CUI from the company link
+
+
+# creating a function that will extract the CUI from the company link
 substrRight <- function(x, n){
   substr(x, nchar(x)-n+1, nchar(x))
 }
 
 
+# Now the party starts. It may take some time until we get all the data :D 
+
 the_data = data.frame()
 # Scrapping the bilant table for each company, it means that the algorithm has to run through each link
 # and get each table for each company
 w = 0
-for (link in 7096:length(ListOfCompanyUrls)){
+for (link in 57600:length(ListOfCompanyUrls)){
   siteUrl <- ListOfCompanyUrls[link]
   tbl.page <- siteUrl %>%
     read_html() %>%
@@ -88,6 +108,13 @@ for (link in 7096:length(ListOfCompanyUrls)){
   else {
     print("Upps, empty jar")
   }
+  
+  # to remember what is the last link that was accessed
   print(link)
   w = w + 1
+
 }
+
+# For more details regarding CUI, check this page
+# https://www.onrc.ro/index.php/ro/ce-reprezinta-si-cum-se-obtin-numarul-de-ordine-in-registrul-comertului-cui-ul-si-cif-ul
+# Get the CAEN code, matriculation number, city, county, nr_asociati, nr_admin, nr_suc, nr_sedii_sec
