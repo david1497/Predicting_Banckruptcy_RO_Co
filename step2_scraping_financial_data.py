@@ -14,13 +14,9 @@ driver = webdriver.Chrome()
 
 data = pd.DataFrame(columns = ['cui', 'name', 'nr_matriculare', 'establishment_date', 'obs', 'county', 'place', 'nr_asociati', 'nr_admin', 'nr_sucursale', 'nr_sedii_secundate', 'financial_data'])
 #balance = pd.DataFrame()
-#%% 
-data2 = pd.DataFrame(columns = ['cui', 'name', 'nr_matriculare', 'establishment_date', 'obs', 'county', 'place', 'nr_asociati', 'nr_admin', 'nr_sucursale', 'nr_sedii_secundate', 'financial_data'])
 #%%
-data1 = pd.DataFrame(columns = ['cui', 'name', 'nr_matriculare', 'establishment_date', 'obs', 'county', 'place', 'nr_asociati', 'nr_admin', 'nr_sucursale', 'nr_sedii_secundate', 'financial_data'])
-#%%
-for i in range(19587, 25000, 1):
-    link = df.loc[i,'x']
+for i in range(1, 5000, 1):
+    link = df.iloc[i,-1]
     driver.get(link)
     date_de_identificare = driver.find_element_by_id("date-de-identificare")
     cui = link[-9:-1]
@@ -41,6 +37,7 @@ for i in range(19587, 25000, 1):
     #print(str(len(rows)-14))
     
     all_rows = pd.DataFrame()
+    # Because the table on the website has 14 extra rows including the graph and other useless info, therefore we have to skip those 14 rows
     for y in range(1,len(rows)-14,1):
         yearly_row = []
         for z in range(8):
@@ -48,12 +45,16 @@ for i in range(19587, 25000, 1):
             yearly_row.append(value)
         all_rows[y] = yearly_row
     #all_rows.columns = ['id','year', 'cifra_de_afaceri', 'net_profit', 'debts', 'long_term_assets', 'short_term_assests', 'capitals', 'nr_employees']
-    data1.loc[i] = [cui, name, nr_matriculare, establishment_date, obs, county, place, nr_asociati, nr_admin, nr_sucursale, nr_sedii_secundate, all_rows.transpose()]
+    data.loc[i] = [cui, name, nr_matriculare, establishment_date, obs, county, place, nr_asociati, nr_admin, nr_sucursale, nr_sedii_secundate, all_rows.transpose()]
     if i%100 == 0:
         print('Got another hundred', i)
         print(i/len(df) * 100, "%")
+    # Maybe the script crashes before the end of the loop, so that to be sure, before going to sleep it does backup, saving what it got until now
     if i%500 == 0:
+        data.to_excel('general_data.xlsx')
+        print('Saved!')
+        # In order to avoid detection of non-human behaviour, the script goes to sleep.
         time.sleep(300)
         print('I took a nap at', i, ' now I am ready to move forward')
-data1.to_excel('general_data3.xlsx')
+data.to_excel('general_data_end_loop.xlsx')
 # %%
